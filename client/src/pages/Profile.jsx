@@ -56,10 +56,7 @@ export default function Profile() {
             </div>
             <h3 className="font-bold text-white text-lg">{user?.name}</h3>
             <p className="text-hb-primary text-xs font-black uppercase tracking-widest mt-1">{user?.role}</p>
-            <div className="mt-6 pt-6 border-t border-hb-border flex flex-col gap-2">
-               <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Global Ranking</div>
-               <div className="text-xl font-black text-white">#402</div>
-            </div>
+            
           </div>
         </div>
 

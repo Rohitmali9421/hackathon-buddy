@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { projectAPI } from '../services/api';
 import ProjectCard from '../components/ProjectCard';
 import TagInput from '../components/TagInput';
@@ -9,12 +10,15 @@ const INITIAL_FORM = {
 };
 
 export default function Projects() {
+  const [searchParams] = useSearchParams();
+  const initialSkill = searchParams.get('skill') || '';
+
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSkill);
   const [error, setError] = useState('');
 
   const load = async () => {
@@ -29,6 +33,13 @@ export default function Projects() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const skillParam = searchParams.get('skill');
+    if (skillParam) {
+      setSearch(skillParam);
+    }
+  }, [searchParams]);
 
   const handleCreate = async (e) => {
     e.preventDefault();

@@ -2,21 +2,38 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getInitials } from '../utils/helpers';
 
-const navLinks = [
-  { path: '/dashboard', label: 'Dashboard', icon: '🏠' },
-  { path: '/match', label: 'Matching', icon: '🎯' },
-  { path: '/projects', label: 'Projects', icon: '🛠️' },
-  { path: '/profile', label: 'Profile', icon: '👤' },
-];
-
 export default function Navbar() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
+  const userSkill = user?.skills?.[0] || '';
+  const contributePath = `/projects?skill=${encodeURIComponent(userSkill)}`;
+
+  const navLinks = [
+    { path: '/dashboard', label: 'Dashboard', icon: '🏠' },
+    { path: '/match', label: 'Matching', icon: '🎯' },
+    { path: contributePath, label: 'Contribute', icon: '🤝', activePaths: ['/projects'] },
+    { path: '/projects', label: 'Projects', icon: '🛠️' },
+    { path: '/profile', label: 'Profile', icon: '👤' },
+  ];
+
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  const isActive = (link) => {
+    if (location.pathname === link.path) return true;
+    if (link.activePaths?.includes(location.pathname) && !new URLSearchParams(location.search).get('skill')) {
+        // Only return true for projects if no skill filter is active or if we are exactly on the path
+        return false; 
+    }
+    // Simple logic for highlighting
+    if (link.label === 'Contribute' && location.pathname === '/projects' && location.search.includes('skill')) return true;
+    if (link.label === 'Projects' && location.pathname === '/projects' && !location.search.includes('skill')) return true;
+    
+    return location.pathname === link.path;
   };
 
   return (
@@ -39,7 +56,7 @@ export default function Navbar() {
               key={path}
               to={path}
               className={`nav-link px-4 py-2 rounded-xl flex items-center gap-2 transition-all duration-300 ${
-                location.pathname === path
+                isActive({path, label})
                   ? 'nav-link-active bg-hb-primary/10'
                   : 'hover:bg-hb-border/30 hover:text-white'
               }`}
@@ -81,7 +98,7 @@ export default function Navbar() {
             key={path}
             to={path}
             className={`flex-1 text-center py-3 px-2 text-[10px] font-bold uppercase tracking-widest transition-all ${
-              location.pathname === path 
+              isActive({path, label}) 
                 ? 'text-hb-primary bg-hb-primary/10 border-b-2 border-hb-primary' 
                 : 'text-gray-500'
             }`}

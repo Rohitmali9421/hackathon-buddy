@@ -35,35 +35,45 @@ app.get('/', (req, res) => res.json({ message: 'Hackathon Buddy API running 🚀
 // Initialize Editor Socket
 require('./sockets/editorSocket')(io);
 
-// --- Socket.io Real-time Chat ---
-// Store messages in memory (use DB for production)
-const roomMessages = {};
+const Message = require('./models/Message');
 
+// --- Socket.io Real-time Chat ---
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);
 
   // Join a project chat room
-  socket.on('join_room', (roomId) => {
+  socket.on('join_room', async (roomId) => {
     socket.join(roomId);
     console.log(`Socket ${socket.id} joined room: ${roomId}`);
 
-    // Send existing messages for this room
-    if (roomMessages[roomId]) {
-      socket.emit('room_history', roomMessages[roomId]);
+    try {
+      // Fetch existing messages from DB
+      const history = await Message.find({ roomId }).sort({ timestamp: 1 }).limit(100);
+      socket.emit('room_history', history);
+    } catch (err) {
+      console.error('Error fetching chat history:', err);
     }
   });
 
   // Handle sending a message
-  socket.on('send_message', (data) => {
+  socket.on('send_message', async (data) => {
     const { roomId, message, sender } = data;
-    const msgObj = { sender, message, timestamp: new Date().toISOString() };
+    
+    try {
+      const newMessage = new Message({
+        roomId,
+        sender,
+        message,
+        timestamp: new Date()
+      });
 
-    // Store message history
-    if (!roomMessages[roomId]) roomMessages[roomId] = [];
-    roomMessages[roomId].push(msgObj);
+      await newMessage.save();
 
-    // Broadcast to all in room
-    io.to(roomId).emit('receive_message', msgObj);
+      // Broadcast to all in room
+      io.to(roomId).emit('receive_message', newMessage);
+    } catch (err) {
+      console.error('Error saving message:', err);
+    }
   });
 
   socket.on('disconnect', () => {
