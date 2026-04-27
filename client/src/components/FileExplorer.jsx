@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 
 /**
- * Modern File Explorer
+ * VS Code style File Explorer with Folder Support
  */
 export default function FileExplorer({ files, onFileSelect, activeFile, onRefresh, onFileCreate }) {
   const [isCreating, setIsCreating] = useState(false);
   const [newFileName, setNewFileName] = useState('');
+  const [expandedFolders, setExpandedFolders] = useState({});
+  const [isExplorerOpen, setIsExplorerOpen] = useState(true);
 
   const handleCreateSubmit = (e) => {
     e.preventDefault();
@@ -15,82 +17,138 @@ export default function FileExplorer({ files, onFileSelect, activeFile, onRefres
     setIsCreating(false);
   };
 
-  return (
-    <div className="bg-hb-card h-full border-r border-hb-border/50 w-64 flex flex-col shrink-0">
-      <div className="p-4 border-b border-hb-border/30 flex items-center justify-between bg-hb-bg/20">
-        <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Resource Grid</h3>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setIsCreating(!isCreating)}
-            className="w-7 h-7 rounded-lg bg-hb-border/30 hover:bg-hb-primary/20 hover:text-hb-primary text-gray-500 transition-all flex items-center justify-center text-xs"
-            title="New File"
-          >
-            +
-          </button>
-          <button 
-            onClick={onRefresh}
-            className="w-7 h-7 rounded-lg bg-hb-border/30 hover:bg-hb-accent/20 hover:text-hb-accent text-gray-500 transition-all flex items-center justify-center text-[10px]"
-            title="Sync Grid"
-          >
-            🔄
-          </button>
-        </div>
-      </div>
+  const toggleFolder = (path) => {
+    setExpandedFolders(prev => ({
+      ...prev,
+      [path]: !prev[path]
+    }));
+  };
 
-      <div className="p-2 flex-1 overflow-y-auto custom-scrollbar">
-        {isCreating && (
-          <form onSubmit={handleCreateSubmit} className="px-2 mb-3">
-            <input
-              autoFocus
-              type="text"
-              placeholder="RESOURCE.JS"
-              className="w-full bg-hb-bg border-2 border-hb-primary/50 text-white text-[10px] font-black px-3 py-2 rounded-xl outline-none uppercase tracking-widest shadow-glow-primary/10"
-              value={newFileName}
-              onChange={(e) => setNewFileName(e.target.value)}
-              onBlur={() => {
-                if (!newFileName.trim()) setIsCreating(false);
-              }}
-            />
-          </form>
-        )}
+  const renderFileItem = (file, depth = 0) => {
+    const isExpanded = expandedFolders[file.path];
+    const isActive = activeFile?.path === file.path;
 
-        <div className="space-y-1">
-          {files.length === 0 && !isCreating ? (
-            <div className="py-12 px-4 text-center opacity-20">
-               <div className="text-3xl mb-2">📡</div>
-               <p className="text-[9px] font-black uppercase tracking-widest">No Signals</p>
-            </div>
-          ) : (
-            files.map((file) => (
-              <div
-                key={file.path}
-                onClick={() => onFileSelect(file)}
-                className={`group flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-xl transition-all duration-300 ${
-                  activeFile?.path === file.path 
-                    ? 'bg-modern-gradient text-white shadow-glow-primary translate-x-1' 
-                    : 'text-gray-500 hover:bg-hb-border/20 hover:text-gray-200'
-                }`}
-              >
-                <span className="text-sm">
-                  {file.type === 'dir' ? '📁' : '📄'}
-                </span>
-                <span className="truncate flex-1 text-[11px] font-bold tracking-tight uppercase">
-                  {file.name}
-                </span>
-                {activeFile?.path === file.path && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]"></span>
-                )}
-              </div>
-            ))
+    return (
+      <div key={file.path}>
+        <div
+          onClick={() => {
+            if (file.type === 'dir') {
+              toggleFolder(file.path);
+              onFileSelect(file); // This will trigger loading folder contents
+            } else {
+              onFileSelect(file);
+            }
+          }}
+          className={`group flex items-center gap-2 cursor-pointer px-2 py-1 rounded transition-all duration-200 ${
+            isActive 
+              ? 'bg-hb-primary/20 text-hb-primary border-l-2 border-hb-primary' 
+              : 'text-gray-400 hover:bg-hb-border/30 hover:text-gray-200'
+          }`}
+          style={{ paddingLeft: `${(depth * 12) + 8}px` }}
+        >
+          <span className="text-[14px] flex-shrink-0">
+            {file.type === 'dir' ? (
+              <span className={`inline-block transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
+                ▶
+              </span>
+            ) : (
+              <span className="opacity-60">📄</span>
+            )}
+          </span>
+          {file.type === 'dir' && <span className="text-sm">📁</span>}
+          <span className="truncate flex-1 text-[12px] font-medium tracking-tight">
+            {file.name}
+          </span>
+          {isActive && (
+            <span className="w-1 h-1 rounded-full bg-hb-primary shadow-glow-primary"></span>
           )}
         </div>
-      </div>
-      
-      <div className="p-4 bg-hb-bg/40 border-t border-hb-border/30">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-hb-border/20 border border-hb-border/50">
-             <div className="w-2 h-2 rounded-full bg-hb-success shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
-             <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Git Stream Active</span>
+        
+        {/* Render nested children if any and folder is expanded */}
+        {file.type === 'dir' && isExpanded && file.children && (
+          <div className="mt-0.5">
+            {file.children.map(child => renderFileItem(child, depth + 1))}
           </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex h-full bg-[#09090b] border-r border-hb-border/30 overflow-hidden select-none">
+      
+
+      {/* Side Bar Content */}
+      <div className="w-60 flex flex-col bg-[#09090b]">
+        {/* Sidebar Header */}
+        <div className="px-4 py-3 flex items-center justify-between group">
+          <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Explorer</h3>
+          <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button 
+              onClick={() => setIsCreating(!isCreating)}
+              className="p-1 hover:bg-hb-border/40 rounded transition-colors"
+              title="New File"
+            >
+              <span className="text-gray-400 text-sm">📄⁺</span>
+            </button>
+            <button 
+              onClick={onRefresh}
+              className="p-1 hover:bg-hb-border/40 rounded transition-colors"
+              title="Refresh"
+            >
+              <span className="text-gray-400 text-sm">🔄</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Collapsible Section: Project Name */}
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <div 
+            onClick={() => setIsExplorerOpen(!isExplorerOpen)}
+            className="px-2 py-1 bg-hb-border/10 border-y border-hb-border/10 flex items-center gap-2 cursor-pointer hover:bg-hb-border/20 transition-colors"
+          >
+            <span className={`text-[8px] transition-transform duration-200 ${isExplorerOpen ? 'rotate-90' : ''}`}>▶</span>
+            <span className="text-[10px] font-black text-gray-300 uppercase tracking-tighter">Project Workspace</span>
+          </div>
+
+          {isExplorerOpen && (
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
+              {isCreating && (
+                <form onSubmit={handleCreateSubmit} className="px-2 mb-2">
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="filename.js"
+                    className="w-full bg-[#18181b] border border-hb-primary/30 text-white text-[12px] px-2 py-1 rounded outline-none"
+                    value={newFileName}
+                    onChange={(e) => setNewFileName(e.target.value)}
+                    onBlur={() => {
+                      if (!newFileName.trim()) setIsCreating(false);
+                    }}
+                  />
+                </form>
+              )}
+
+              <div className="space-y-0.5">
+                {files.length === 0 && !isCreating ? (
+                  <div className="py-12 px-4 text-center">
+                     <p className="text-[10px] font-medium text-gray-600 uppercase tracking-widest">The workspace is empty</p>
+                  </div>
+                ) : (
+                  files.map(file => renderFileItem(file))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Bottom Status (VS Code like) */}
+        <div className="p-3 bg-hb-bg/40 border-t border-hb-border/10 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+               <div className="w-1.5 h-1.5 rounded-full bg-hb-success" />
+               <span className="text-[9px] font-bold text-gray-600 uppercase tracking-wider">Connected to Main</span>
+            </div>
+        </div>
       </div>
     </div>
   );

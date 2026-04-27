@@ -77,7 +77,27 @@ export default function EditorPage() {
   const loadFiles = async (path = '') => {
     try {
       const res = await githubAPI.getFiles(projectId, path);
-      setFiles(res.data);
+      const newFiles = res.data;
+
+      if (path === '') {
+        setFiles(newFiles);
+      } else {
+        // Update the tree recursively
+        setFiles(prevFiles => {
+          const updateTree = (items) => {
+            return items.map(item => {
+              if (item.path === path) {
+                return { ...item, children: newFiles };
+              }
+              if (item.children) {
+                return { ...item, children: updateTree(item.children) };
+              }
+              return item;
+            });
+          };
+          return updateTree(prevFiles);
+        });
+      }
     } catch (err) {
       console.error(err);
       if (err.response?.status === 500) {
@@ -88,7 +108,10 @@ export default function EditorPage() {
 
   const handleFileSelect = async (file) => {
     if (file.type === 'dir') {
-      loadFiles(file.path);
+      // If children not loaded yet, load them
+      if (!file.children) {
+        loadFiles(file.path);
+      }
       return;
     }
 
@@ -96,6 +119,7 @@ export default function EditorPage() {
       setLoading(true);
       setActiveFile(file);
       const res = await githubAPI.getFileContent(projectId, file.path);
+      // Decoded content might be complex if it's binary or very large, but for text:
       const decodedContent = atob(res.data.content.replace(/\n/g, ''));
       setCode(decodedContent);
       setActiveFile({ ...file, sha: res.data.sha });

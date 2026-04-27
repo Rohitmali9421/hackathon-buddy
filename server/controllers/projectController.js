@@ -1,4 +1,6 @@
 const Project = require('../models/Project');
+const User = require('../models/User');
+const { calculateProjectScore } = require('../services/matchService');
 
 // @route  POST /api/projects
 const createProject = async (req, res) => {
@@ -27,7 +29,20 @@ const getProjects = async (req, res) => {
       .populate('teamMembers', 'name role skills')
       .populate('pendingRequests', 'name role skills')
       .sort({ createdAt: -1 });
-    res.json(projects);
+
+    const currentUser = await User.findById(req.user._id);
+    if (!currentUser) return res.status(404).json({ message: 'User not found' });
+
+    const scoredProjects = projects.map((project) => {
+      const { score, matchedSkills } = calculateProjectScore(currentUser, project);
+      return {
+        ...project.toObject(),
+        matchScore: score,
+        matchedSkills
+      };
+    });
+
+    res.json(scoredProjects);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

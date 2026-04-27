@@ -13,7 +13,6 @@ export default function Navbar() {
   const navLinks = [
     { path: '/dashboard', label: 'Dashboard', icon: '🏠' },
     { path: '/match', label: 'Matching', icon: '🎯' },
-    { path: contributePath, label: 'Contribute', icon: '🤝', activePaths: ['/projects'] },
     { path: '/projects', label: 'Projects', icon: '🛠️' },
     { path: '/profile', label: 'Profile', icon: '👤' },
   ];

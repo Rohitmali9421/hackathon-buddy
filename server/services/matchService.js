@@ -102,6 +102,26 @@ const getTopMatches = async (userId) => {
 };
 
 /**
+ * calculateProjectScore(user, project)
+ * -------------------------------------
+ * Returns match data for a single project against a user.
+ */
+const calculateProjectScore = (user, project) => {
+  // Score based on required skills match (60%)
+  const skillMatch = jaccardScore(user.skills, project.requiredSkills) * 60;
+
+  // Score based on interest/domain match (40%)
+  const interestMatch = jaccardScore(user.interests, project.interests) * 40;
+
+  const score = Math.round((skillMatch + interestMatch) * 10) / 10;
+  const matchedSkills = (user.skills || []).filter((s) =>
+    (project.requiredSkills || []).map((x) => x.toLowerCase()).includes(s.toLowerCase())
+  );
+
+  return { score, matchedSkills };
+};
+
+/**
  * recommendProjects(userId)
  * --------------------------
  * Returns top 5 recommended projects based on user's skills + interests.
@@ -117,17 +137,7 @@ const recommendProjects = async (userId) => {
   }).populate('createdBy', 'name role');
 
   const scored = projects.map((project) => {
-    // Score based on required skills match
-    const skillMatch = jaccardScore(currentUser.skills, project.requiredSkills) * 60;
-
-    // Score based on interest/domain match
-    const interestMatch = jaccardScore(currentUser.interests, project.interests) * 40;
-
-    const score = Math.round((skillMatch + interestMatch) * 10) / 10;
-    const matchedSkills = (currentUser.skills || []).filter((s) =>
-      (project.requiredSkills || []).map((x) => x.toLowerCase()).includes(s.toLowerCase())
-    );
-
+    const { score, matchedSkills } = calculateProjectScore(currentUser, project);
     return { project, score, matchedSkills };
   });
 
@@ -136,4 +146,4 @@ const recommendProjects = async (userId) => {
     .slice(0, 5);
 };
 
-module.exports = { calculateMatchScore, getTopMatches, recommendProjects };
+module.exports = { calculateMatchScore, getTopMatches, recommendProjects, calculateProjectScore };

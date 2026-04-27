@@ -181,7 +181,15 @@ export default function Projects() {
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filtered.map((project) => (
-            <ProjectCard key={project._id} project={project} onJoin={handleJoin} onLeave={handleLeave} showRequests={true} />
+            <ProjectCard 
+              key={project._id} 
+              project={project} 
+              matchScore={project.matchScore}
+              matchedSkills={project.matchedSkills}
+              onJoin={handleJoin} 
+              onLeave={handleLeave} 
+              showRequests={true} 
+            />
           ))}
         </div>
       )}
