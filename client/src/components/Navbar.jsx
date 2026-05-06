@@ -14,6 +14,7 @@ export default function Navbar() {
     { path: '/dashboard', label: 'Dashboard', icon: '🏠' },
     { path: '/match', label: 'Matching', icon: '🎯' },
     { path: '/projects', label: 'Projects', icon: '🛠️' },
+    { path: '/hackathons', label: 'Hackathons', icon: '🧑‍💻' },
     { path: '/profile', label: 'Profile', icon: '👤' },
   ];
 

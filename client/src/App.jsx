@@ -11,6 +11,7 @@ import Chat from './pages/Chat';
 import PrivateChat from './pages/PrivateChat';
 import EditorPage from './pages/EditorPage';
 import Landing from './pages/Landing';
+import HackathonExplorer from './pages/HackathonExplorer';
 
 // Protect routes - redirect to login if not authenticated
 const PrivateRoute = ({ children }) => {
@@ -37,6 +38,7 @@ function AppRoutes() {
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
         <Route path="/projects" element={<PrivateRoute><Projects /></PrivateRoute>} />
         <Route path="/match" element={<PrivateRoute><Matching /></PrivateRoute>} />
+        <Route path="/hackathons" element={<PrivateRoute><HackathonExplorer/></PrivateRoute>} />
         <Route path="/chat/:projectId" element={<PrivateRoute><Chat /></PrivateRoute>} />
         <Route path="/chat/private/:recipientId" element={<PrivateRoute><PrivateChat /></PrivateRoute>} />
         <Route path="/editor/:projectId" element={<PrivateRoute><EditorPage /></PrivateRoute>} />
