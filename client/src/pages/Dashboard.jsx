@@ -13,6 +13,10 @@ export default function Dashboard() {
   const [recProjects, setRecProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [joinMessage, setJoinMessage] = useState('');
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -33,13 +37,24 @@ export default function Dashboard() {
     load();
   }, []);
 
-  const handleJoin = async (id) => {
+  const handleJoinClick = (id) => {
+    setSelectedProjectId(id);
+    setShowJoinModal(true);
+  };
+
+  const submitJoinRequest = async () => {
     try {
-      await projectAPI.join(id);
+      setLoading(true);
+      await projectAPI.join(selectedProjectId, { message: joinMessage });
+      setShowJoinModal(false);
+      setJoinMessage('');
+      
       const myProjRes = await projectAPI.getMy();
       setMyProjects(myProjRes.data);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to join');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -160,7 +175,7 @@ export default function Dashboard() {
               {recProjects.map(({ project, score, matchedSkills }) => (
                 <ProjectCard key={project._id} project={project}
                   matchScore={score} matchedSkills={matchedSkills} 
-                  onJoin={handleJoin} onLeave={handleLeave} showRequests={true} />
+                  onJoin={handleJoinClick} onLeave={handleLeave} showRequests={true} />
               ))}
             </div>
           )}
@@ -176,10 +191,55 @@ export default function Dashboard() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {myProjects.map((p) => (
-              <ProjectCard key={p._id} project={p} onJoin={handleJoin} onLeave={handleLeave} showRequests={true} />
+              <ProjectCard key={p._id} project={p} onJoin={handleJoinClick} onLeave={handleLeave} showRequests={true} />
             ))}
           </div>
         </section>
+      )}
+
+      {/* Join Request Modal */}
+      {showJoinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-hb-bg/80 backdrop-blur-sm animate-fade-in">
+          <div className="card max-w-md w-full border-hb-primary/30 shadow-glow-primary/20 bg-hb-card animate-scale-in">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-modern-gradient flex items-center justify-center text-lg shadow-glow-primary">✉️</div>
+              <h2 className="text-2xl font-black text-white tracking-tight uppercase">Join Request</h2>
+            </div>
+            
+            <p className="text-gray-400 text-sm mb-6 font-medium">
+              Tell the project owner why you're a great fit for this team.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">Your Message</label>
+                <textarea 
+                  className="input" 
+                  rows={4} 
+                  placeholder="I'm interested in this project because..." 
+                  value={joinMessage}
+                  onChange={(e) => setJoinMessage(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button 
+                onClick={() => setShowJoinModal(false)}
+                className="btn-secondary flex-1 py-3 text-xs uppercase font-black"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={submitJoinRequest}
+                disabled={loading || !joinMessage.trim()}
+                className="btn-primary flex-1 py-3 text-xs uppercase font-black"
+              >
+                {loading ? 'Sending...' : 'Send Request'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

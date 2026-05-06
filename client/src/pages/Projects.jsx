@@ -21,6 +21,10 @@ export default function Projects() {
   const [search, setSearch] = useState(initialSkill);
   const [error, setError] = useState('');
 
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [joinMessage, setJoinMessage] = useState('');
+
   const load = async () => {
     try {
       const { data } = await projectAPI.getAll();
@@ -57,12 +61,22 @@ export default function Projects() {
     }
   };
 
-  const handleJoin = async (id) => {
+  const handleJoinClick = (id) => {
+    setSelectedProjectId(id);
+    setShowJoinModal(true);
+  };
+
+  const submitJoinRequest = async () => {
     try {
-      await projectAPI.join(id);
+      setSubmitting(true);
+      await projectAPI.join(selectedProjectId, { message: joinMessage });
+      setShowJoinModal(false);
+      setJoinMessage('');
       load();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to join');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -186,11 +200,56 @@ export default function Projects() {
               project={project} 
               matchScore={project.matchScore}
               matchedSkills={project.matchedSkills}
-              onJoin={handleJoin} 
+              onJoin={handleJoinClick} 
               onLeave={handleLeave} 
               showRequests={true} 
             />
           ))}
+        </div>
+      )}
+
+      {/* Join Request Modal */}
+      {showJoinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-hb-bg/80 backdrop-blur-sm animate-fade-in">
+          <div className="card max-w-md w-full border-hb-primary/30 shadow-glow-primary/20 bg-hb-card animate-scale-in">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-modern-gradient flex items-center justify-center text-lg shadow-glow-primary">✉️</div>
+              <h2 className="text-2xl font-black text-white tracking-tight uppercase">Join Request</h2>
+            </div>
+            
+            <p className="text-gray-400 text-sm mb-6 font-medium">
+              Tell the project owner why you're a great fit for this team.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">Your Message</label>
+                <textarea 
+                  className="input" 
+                  rows={4} 
+                  placeholder="I'm interested in this project because..." 
+                  value={joinMessage}
+                  onChange={(e) => setJoinMessage(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button 
+                onClick={() => setShowJoinModal(false)}
+                className="btn-secondary flex-1 py-3 text-xs uppercase font-black"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={submitJoinRequest}
+                disabled={submitting || !joinMessage.trim()}
+                className="btn-primary flex-1 py-3 text-xs uppercase font-black"
+              >
+                {submitting ? 'Sending...' : 'Send Request'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

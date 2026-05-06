@@ -1,6 +1,7 @@
 const Project = require('../models/Project');
 const User = require('../models/User');
 const { calculateProjectScore } = require('../services/matchService');
+const { analyzeFit } = require('../services/aiService');
 
 // @route  POST /api/projects
 const createProject = async (req, res) => {
@@ -27,7 +28,7 @@ const getProjects = async (req, res) => {
     const projects = await Project.find()
       .populate('createdBy', 'name role')
       .populate('teamMembers', 'name role skills')
-      .populate('pendingRequests', 'name role skills')
+      .populate('pendingRequests.user', 'name role skills')
       .sort({ createdAt: -1 });
 
     const currentUser = await User.findById(req.user._id);
@@ -51,6 +52,7 @@ const getProjects = async (req, res) => {
 // @route  POST /api/projects/join/:id
 const joinProject = async (req, res) => {
   try {
+    const { message } = req.body;
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: 'Project not found' });
 
@@ -58,7 +60,7 @@ const joinProject = async (req, res) => {
       return res.status(400).json({ message: 'Already a member' });
     }
     
-    if (project.pendingRequests.includes(req.user._id)) {
+    if (project.pendingRequests.some(r => r.user.toString() === req.user._id.toString())) {
       return res.status(400).json({ message: 'Request already sent' });
     }
 
@@ -66,11 +68,19 @@ const joinProject = async (req, res) => {
       return res.status(400).json({ message: 'Team is full' });
     }
 
-    project.pendingRequests.push(req.user._id);
+    // Generate AI Summary
+    const applicant = await User.findById(req.user._id);
+    const aiSummary = await analyzeFit(project, applicant, message);
+
+    project.pendingRequests.push({ 
+      user: req.user._id, 
+      message: message || '',
+      aiSummary: aiSummary
+    });
     await project.save();
     await project.populate('createdBy', 'name role');
     await project.populate('teamMembers', 'name role skills');
-    await project.populate('pendingRequests', 'name role skills');
+    await project.populate('pendingRequests.user', 'name role skills');
     res.json(project);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -88,7 +98,10 @@ const approveJoinRequest = async (req, res) => {
       return res.status(401).json({ message: 'Not authorized' });
     }
 
-    if (!project.pendingRequests.includes(req.params.userId)) {
+    const requestIndex = project.pendingRequests.findIndex(
+      (r) => r.user.toString() === req.params.userId
+    );
+    if (requestIndex === -1) {
       return res.status(400).json({ message: 'Request not found' });
     }
 
@@ -97,15 +110,13 @@ const approveJoinRequest = async (req, res) => {
     }
 
     // Move from pending to teamMembers
-    project.pendingRequests = project.pendingRequests.filter(
-      (id) => id.toString() !== req.params.userId
-    );
+    project.pendingRequests.splice(requestIndex, 1);
     project.teamMembers.push(req.params.userId);
 
     await project.save();
     await project.populate('createdBy', 'name role');
     await project.populate('teamMembers', 'name role skills');
-    await project.populate('pendingRequests', 'name role skills');
+    await project.populate('pendingRequests.user', 'name role skills');
     res.json(project);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -124,13 +135,13 @@ const rejectJoinRequest = async (req, res) => {
     }
 
     project.pendingRequests = project.pendingRequests.filter(
-      (id) => id.toString() !== req.params.userId
+      (r) => r.user.toString() !== req.params.userId
     );
 
     await project.save();
     await project.populate('createdBy', 'name role');
     await project.populate('teamMembers', 'name role skills');
-    await project.populate('pendingRequests', 'name role skills');
+    await project.populate('pendingRequests.user', 'name role skills');
     res.json(project);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -164,7 +175,7 @@ const getMyProjects = async (req, res) => {
     })
       .populate('createdBy', 'name role')
       .populate('teamMembers', 'name role skills')
-      .populate('pendingRequests', 'name role skills');
+      .populate('pendingRequests.user', 'name role skills');
     res.json(projects);
   } catch (err) {
     res.status(500).json({ message: err.message });

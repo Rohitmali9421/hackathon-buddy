@@ -18,7 +18,7 @@ export default function ProjectCard({ project: initialProject, onJoin, onLeave, 
     (m) => (m._id || m) === user?._id
   );
   const isPending = project.pendingRequests?.some(
-    (m) => (m._id || m) === user?._id
+    (req) => (req.user?._id || req.user) === user?._id
   );
   const isCreator = (project.createdBy?._id || project.createdBy) === user?._id;
   const isFull = project.teamMembers?.length >= project.maxTeamSize;
@@ -159,33 +159,46 @@ export default function ProjectCard({ project: initialProject, onJoin, onLeave, 
           <div className="flex items-center justify-between mb-3">
              <p className="text-[9px] font-black text-hb-primary uppercase tracking-widest">Join Requests ({project.pendingRequests.length})</p>
           </div>
-          <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar pr-1">
-            {project.pendingRequests.map((reqUser) => (
-              <div key={reqUser._id} className="flex items-center justify-between bg-hb-bg/50 p-2 rounded-xl border border-hb-border/50">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-modern-gradient flex items-center justify-center text-[8px] font-black text-white">
-                    {getInitials(reqUser.name)}
+          <div className="space-y-3 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+            {project.pendingRequests.map((request) => (
+              <div key={request.user?._id || request.user} className="flex flex-col bg-hb-bg/50 p-3 rounded-xl border border-hb-border/50 gap-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-modern-gradient flex items-center justify-center text-[8px] font-black text-white">
+                      {getInitials(request.user?.name || '?')}
+                    </div>
+                    <span className="text-[10px] font-bold text-white truncate max-w-[80px]">{request.user?.name || 'Unknown'}</span>
                   </div>
-                  <span className="text-[10px] font-bold text-white truncate max-w-[80px]">{reqUser.name}</span>
+                  <div className="flex gap-1.5">
+                    <button 
+                      disabled={actionLoading}
+                      onClick={() => handleApprove(request.user?._id || request.user)}
+                      className="w-6 h-6 rounded-lg bg-hb-success/20 text-hb-success hover:bg-hb-success hover:text-white transition-all text-xs flex items-center justify-center"
+                      title="Approve"
+                    >
+                      ✓
+                    </button>
+                    <button 
+                      disabled={actionLoading}
+                      onClick={() => handleReject(request.user?._id || request.user)}
+                      className="w-6 h-6 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all text-xs flex items-center justify-center"
+                      title="Reject"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-1.5">
-                  <button 
-                    disabled={actionLoading}
-                    onClick={() => handleApprove(reqUser._id)}
-                    className="w-6 h-6 rounded-lg bg-hb-success/20 text-hb-success hover:bg-hb-success hover:text-white transition-all text-xs flex items-center justify-center"
-                    title="Approve"
-                  >
-                    ✓
-                  </button>
-                  <button 
-                    disabled={actionLoading}
-                    onClick={() => handleReject(reqUser._id)}
-                    className="w-6 h-6 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all text-xs flex items-center justify-center"
-                    title="Reject"
-                  >
-                    ✕
-                  </button>
-                </div>
+                {request.aiSummary && (
+                  <div className="flex flex-col gap-1.5 bg-hb-card/50 p-2.5 rounded-lg border border-hb-primary/20">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[7px] font-black text-hb-primary uppercase tracking-[0.2em]">Smart Fit Analysis</span>
+                      <div className="h-[1px] flex-1 bg-hb-primary/10" />
+                    </div>
+                    <div className="text-[9px] text-gray-400 font-medium leading-relaxed italic">
+                      "{request.aiSummary}"
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
